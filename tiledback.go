@@ -8,16 +8,11 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"log"
 	"os"
 	"sync"
 
 	"fyne.io/fyne"
 	"fyne.io/fyne/canvas"
-
-	// "fyne.io/fyne/theme"
-
-	// "fyne.io/fyne/layout"
 	"fyne.io/fyne/widget"
 )
 
@@ -89,7 +84,6 @@ type tileBackgroundRender struct {
 }
 
 func newTileBackgroundRender(tb *TileBackground) *tileBackgroundRender {
-	log.Printf("creating new redener")
 	r := &tileBackgroundRender{
 		tb:               tb,
 		mux:              new(sync.RWMutex),
@@ -107,20 +101,15 @@ func (tbr *tileBackgroundRender) Destroy() {
 func (tbr *tileBackgroundRender) Layout(layoutsize fyne.Size) {
 	tbr.mux.Lock()
 	defer tbr.mux.Unlock()
-	log.Printf("layout for %v", layoutsize)
 	if len(tbr.overallContainer.Objects) == 0 || !layoutsize.Subtract(tbr.curSize).IsZero() {
-		log.Printf("working for %v", layoutsize)
 		brimg := TileImage(tbr.tb.unitImage, layoutsize.Width, layoutsize.Height)
-		log.Printf("created image with size %v", brimg.Bounds().Size())
 		tbr.genImg = canvas.NewImageFromImage(brimg)
+		tbr.genImg.FillMode = canvas.ImageFillContain
 		tbr.genImg.Resize(layoutsize)
 		tbr.overallContainer = fyne.NewContainerWithoutLayout()
 		tbr.overallContainer.Add(tbr.genImg)
 		tbr.curSize = layoutsize
-		// tbr.overallContainer.Resize(layoutsize)
-
 	}
-
 }
 
 func (tbr *tileBackgroundRender) MinSize() fyne.Size {
@@ -130,20 +119,8 @@ func (tbr *tileBackgroundRender) MinSize() fyne.Size {
 func (tbr *tileBackgroundRender) Objects() []fyne.CanvasObject {
 	tbr.mux.RLock()
 	defer tbr.mux.RUnlock()
-	log.Printf("objects return %d objects", len(tbr.overallContainer.Objects))
-	// out, err := os.Create("./output.jpg")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// var opt jpeg.Options
-	// opt.Quality = 80
-
-	// jpeg.Encode(out, newimg, &opt)
 	return []fyne.CanvasObject{tbr.overallContainer}
 }
 func (tbr *tileBackgroundRender) Refresh() {
-	log.Printf("refreshing")
 	canvas.Refresh(tbr.tb)
-
 }
