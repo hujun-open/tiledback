@@ -4,7 +4,6 @@ package tiledback
 import (
 	"image"
 	"image/color"
-	"image/draw"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -16,42 +15,33 @@ import (
 	"fyne.io/fyne/widget"
 )
 
-func TileImage(img image.Image, width, height int) image.Image {
-	unitw := img.Bounds().Dx()
-	unith := img.Bounds().Dy()
-	if img.Bounds().Dx() >= width && img.Bounds().Dy() >= height {
-		return img
-	}
-	curPoint := image.Pt(0, 0)
-	rect := image.Rect(0, 0, width, height)
-	rimg := image.NewRGBA(rect)
-	var neww, newh int
-	for hleft := height; hleft > 0; hleft = hleft - img.Bounds().Dy() {
-		for wleft := width; wleft > 0; wleft = wleft - img.Bounds().Dx() {
-			neww = unitw
-			if width-curPoint.X < unitw {
-				neww = width - curPoint.X
-			}
-			newh = unith
-			if height-curPoint.Y < unith {
-				newh = height - curPoint.Y
-			}
-			draw.Draw(rimg, image.Rect(curPoint.X, curPoint.Y, curPoint.X+neww, curPoint.Y+newh), img, image.Pt(0, 0), draw.Over)
-			curPoint = image.Pt(curPoint.X+neww, curPoint.Y)
-		}
-		curPoint = image.Pt(0, curPoint.Y+newh)
-	}
-	return rimg
+type tile struct {
+	image.Image
+	unitw, unith int
+}
+
+func newTile(img image.Image) *tile {
+	r := new(tile)
+	r.Image = img
+	r.unitw = img.Bounds().Dx()
+	r.unith = img.Bounds().Dy()
+	return r
+}
+
+func (t *tile) genRaster(x, y, w, h int) color.Color {
+	ux := x % t.unitw
+	uy := y % t.unith
+	return t.Image.At(ux, uy)
 }
 
 type TileBackground struct {
 	widget.BaseWidget
-	unitImage image.Image
+	unitImage *tile
 }
 
 func NewTileBackground(unitImg image.Image) *TileBackground {
 	tile := &TileBackground{
-		unitImage: unitImg,
+		unitImage: newTile(unitImg),
 	}
 	tile.ExtendBaseWidget(tile)
 	return tile
@@ -78,7 +68,7 @@ func (tb *TileBackground) CreateRenderer() fyne.WidgetRenderer {
 type tileBackgroundRender struct {
 	tb               *TileBackground
 	overallContainer *fyne.Container
-	genImg           *canvas.Image
+	genImg           *canvas.Raster
 	mux              *sync.RWMutex
 	curSize          fyne.Size
 }
@@ -102,9 +92,7 @@ func (tbr *tileBackgroundRender) Layout(layoutsize fyne.Size) {
 	tbr.mux.Lock()
 	defer tbr.mux.Unlock()
 	if len(tbr.overallContainer.Objects) == 0 || !layoutsize.Subtract(tbr.curSize).IsZero() {
-		brimg := TileImage(tbr.tb.unitImage, layoutsize.Width, layoutsize.Height)
-		tbr.genImg = canvas.NewImageFromImage(brimg)
-		tbr.genImg.FillMode = canvas.ImageFillContain
+		tbr.genImg = canvas.NewRasterWithPixels(tbr.tb.unitImage.genRaster)
 		tbr.genImg.Resize(layoutsize)
 		tbr.overallContainer = fyne.NewContainerWithoutLayout()
 		tbr.overallContainer.Add(tbr.genImg)
