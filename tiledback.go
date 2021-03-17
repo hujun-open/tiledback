@@ -10,9 +10,9 @@ import (
 	"os"
 	"sync"
 
-	"fyne.io/fyne"
-	"fyne.io/fyne/canvas"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/widget"
 )
 
 type tile struct {
@@ -101,7 +101,8 @@ func (tbr *tileBackgroundRender) Layout(layoutsize fyne.Size) {
 }
 
 func (tbr *tileBackgroundRender) MinSize() fyne.Size {
-	return fyne.NewSize(tbr.tb.unitImage.Bounds().Dx(), tbr.tb.unitImage.Bounds().Dy())
+	return fyne.NewSize(float32(tbr.tb.unitImage.Bounds().Dx()),
+		float32(tbr.tb.unitImage.Bounds().Dy()))
 }
 
 func (tbr *tileBackgroundRender) Objects() []fyne.CanvasObject {
